@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR Code Generator - Secret Code Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0015;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(120, 0, 255, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(75, 0, 130, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(138, 43, 226, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 90% 10%, rgba(0, 0, 139, 0.3) 0%, transparent 50%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        .particle {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: rgba(138, 43, 226, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 15s infinite;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.8), 0 0 20px rgba(138, 43, 226, 0.5);
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) translateX(0) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) translateX(100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 0.8), 0 0 40px rgba(138, 43, 226, 0.5), 0 4px 6px rgba(0, 0, 0, 0.3);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #c8b6ff;
+            font-weight: 300;
+            text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+        }
+
+        .upload-section {
+            background: rgba(20, 10, 40, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(138, 43, 226, 0.2);
+            margin-bottom: 30px;
+            animation: fadeInUp 1s ease 0.3s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .upload-area {
+            border: 3px dashed rgba(138, 43, 226, 0.6);
+            border-radius: 15px;
+            padding: 50px 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            background: rgba(10, 5, 20, 0.5);
+        }
+
+        .upload-area:hover {
+            border-color: rgba(138, 43, 226, 1);
+            background: rgba(138, 43, 226, 0.15);
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(138, 43, 226, 0.4);
+        }
+
+        .upload-area.drag-over {
+            border-color: rgba(138, 43, 226, 1);
+            background: rgba(138, 43, 226, 0.2);
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(138, 43, 226, 0.6);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .upload-text {
+            font-size: 1.3rem;
+            color: #ffffff;
+            margin-bottom: 10px;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+        }
+
+        .upload-hint {
+            font-size: 0.95rem;
+            color: #c8b6ff;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        #status {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.1rem;
+            color: white;
+            font-weight: 500;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.8;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+
+        .progress-bar {
+            width: 100%;
+            height: 40px;
+            background: rgba(20, 10, 40, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 20px;
+            display: none;
+            position: relative;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+            animation: shimmer 2s infinite;
+            position: relative;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -1000px 0;
+            }
+            100% {
+                background-position: 1000px 0;
+            }
+        }
+
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .upload-section {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated background particles -->
+    <script>
+        for (let i = 0; i < 20; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 15 + 's';
+            particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            document.body.appendChild(particle);
+        }
+    </script>
+
+    <div class="container">
+        <header>
+            <h1>🔐 QR Code Generator</h1>
+            <p class="subtitle">Transform your secret codes into QR codes instantly</p>
+        </header>
+
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Drop your file here or click to browse</div>
+                <div class="upload-hint">Supports .txt, .pdf, .xlsx, .xls, and .csv files</div>
+                <input type="file" id="fileInput" accept=".txt,.pdf,.xlsx,.xls,.csv" />
+                <button class="btn" onclick="document.getElementById('fileInput').click()">
+                    Choose File
+                </button>
+            </div>
+
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+                <div class="progress-text" id="progressText">0%</div>
+            </div>
+        </div>
+
+        <div id="status" style="display: none;"></div>
+
+        <div class="controls" id="controls" style="display: none;">
+            <button class="btn btn-success" id="downloadPdfBtn">
+                📄 Download as PDFs (Batches)
+            </button>
+            <button class="btn btn-secondary" id="clearBtn">
+                🗑️ Clear All
+            </button>
+        </div>
+
+        <div class="controls" id="pdfOptions" style="display: none; margin-top: 10px;">
+            <div style="color: #c8b6ff; font-size: 0.95rem;">
+                <label style="margin-right: 15px;">
+                    <input type="radio" name="pdfMode" value="batch" checked style="margin-right: 5px;">
+                    Batch Mode (1000 QR/PDF)
+                </label>
+                <label>
+                    <input type="radio" name="pdfMode" value="single" style="margin-right: 5px;">
+                    Single PDF (All QR codes)
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- QRCode.js library -->
+    <!-- QRCode.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- PDF.js for PDF parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        const fileInput = document.getElementById("fileInput");
+        const uploadArea = document.getElementById("uploadArea");
+        const statusEl = document.getElementById("status");
+        const progressBar = document.getElementById("progressBar");
+        const progressFill = document.getElementById("progressFill");
+        const progressText = document.getElementById("progressText");
+        const controls = document.getElementById("controls");
+        const pdfOptions = document.getElementById("pdfOptions");
+        const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+        const clearBtn = document.getElementById("clearBtn");
+
+        let secretCodes = [];
+        const PDF_BATCH_SIZE = 1000; // 1000 QR codes per PDF
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        fileInput.addEventListener("change", () => {
+            const file = fileInput.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        function handleFile(file) {
+            statusEl.style.display = 'block';
+            statusEl.textContent = "📖 Reading file...";
+            progressBar.style.display = 'block';
+            progressFill.style.width = '30%';
+            progressText.textContent = '30%';
+
+            const fileName = file.name.toLowerCase();
+
+            if (fileName.endsWith('.txt') || fileName.endsWith('.csv')) {
+                handleTextFile(file);
+            } else if (fileName.endsWith('.pdf')) {
+                handlePDFFile(file);
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                handleExcelFile(file);
+            } else {
+                statusEl.textContent = "❌ Unsupported file type. Please upload .txt, .pdf, .xlsx, .xls, or .csv files.";
+                progressBar.style.display = 'none';
+            }
+        }
+
+        function handleTextFile(file) {
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+                processSecretCodes(lines, file.name);
+            };
+
+            reader.onerror = () => {
+                statusEl.textContent = "❌ Error reading file.";
+                progressBar.style.display = 'none';
+            };
+
+            reader.readAsText(file);
+        }
+
+        async function handlePDFFile(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                let allText = '';
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    allText += pageText + '\n';
+                }
+
+                const lines = allText.split(/\r?\n/).filter(line => line.trim().length > 0);
+                processSecretCodes(lines, file.name);
+            } catch (error) {
+                console.error('PDF parsing error:', error);
+                statusEl.textContent = "❌ Error parsing PDF file: " + error.message;
+                progressBar.style.display = 'none';
+            }
+        }
+
+        function handleExcelFile(file) {
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    let allLines = [];
+
+                    workbook.SheetNames.forEach(sheetName => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        jsonData.forEach(row => {
+                            row.forEach(cell => {
+                                if (cell !== null && cell !== undefined && cell.toString().trim().length > 0) {
+                                    allLines.push(cell.toString().trim());
+                                }
+                            });
+                        });
+                    });
+
+                    processSecretCodes(allLines, file.name);
+                } catch (error) {
+                    console.error('Excel parsing error:', error);
+                    statusEl.textContent = "❌ Error parsing Excel file: " + error.message;
+                    progressBar.style.display = 'none';
+                }
+            };
+
+            reader.onerror = () => {
+                statusEl.textContent = "❌ Error reading Excel file.";
+                progressBar.style.display = 'none';
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processSecretCodes(lines, fileName) {
+            secretCodes = lines.filter(line => line.trim().length > 0).map(line => line.trim());
+
+            if (secretCodes.length === 0) {
+                statusEl.textContent = "❌ No valid data found in file.";
+                progressBar.style.display = 'none';
+                return;
+            }
+
+            progressFill.style.width = '100%';
+            progressText.textContent = '100%';
+            statusEl.textContent = `✅ Loaded ${secretCodes.length.toLocaleString()} secret codes from: ${fileName}. Ready to generate PDFs!`;
+            controls.style.display = 'flex';
+            pdfOptions.style.display = 'flex';
+
+            // Hide progress bar after file is loaded
+            setTimeout(() => {
+                progressBar.style.display = 'none';
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+            }, 1500);
+        }
+
+
+        // Generate QR code on canvas (for PDF)
+        function generateQRCanvas(text, size = 200) {
+            return new Promise((resolve) => {
+                const tempDiv = document.createElement('div');
+                tempDiv.style.display = 'none';
+                document.body.appendChild(tempDiv);
+
+                const qr = new QRCode(tempDiv, {
+                    text: text,
+                    width: size,
+                    height: size,
+                    correctLevel: QRCode.CorrectLevel.H,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff"
+                });
+
+                setTimeout(() => {
+                    const canvas = tempDiv.querySelector('canvas');
+                    const imageData = canvas.toDataURL('image/png');
+                    document.body.removeChild(tempDiv);
+                    resolve(imageData);
+                }, 50);
+            });
+        }
+
+        // Download PDFs
+        downloadPdfBtn.addEventListener('click', async () => {
+            if (secretCodes.length === 0) return;
+
+            const mode = document.querySelector('input[name="pdfMode"]:checked').value;
+
+            if (mode === 'batch') {
+                await generateBatchPDFs();
+            } else {
+                await generateSinglePDF();
+            }
+        });
+
+        async function generateBatchPDFs() {
+            const totalBatches = Math.ceil(secretCodes.length / PDF_BATCH_SIZE);
+
+            statusEl.textContent = `📄 Starting generation of ${totalBatches} PDF file(s)...`;
+            statusEl.style.display = 'block';
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.textContent = '0%';
+
+            for (let batchNum = 0; batchNum < totalBatches; batchNum++) {
+                const startIdx = batchNum * PDF_BATCH_SIZE;
+                const endIdx = Math.min(startIdx + PDF_BATCH_SIZE, secretCodes.length);
+                const batchCodes = secretCodes.slice(startIdx, endIdx);
+
+                statusEl.textContent = `📄 Generating PDF ${batchNum + 1} of ${totalBatches} (${batchCodes.length} QR codes)...`;
+
+                await generatePDFFromCodes(batchCodes, batchNum + 1, totalBatches);
+
+                // Update progress AFTER each PDF is generated
+                const progressPercentage = Math.round(((batchNum + 1) / totalBatches) * 100);
+                progressFill.style.width = progressPercentage + '%';
+                progressText.textContent = progressPercentage + '%';
+
+                // Small delay to prevent browser freeze and show progress
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            statusEl.textContent = `✅ Successfully generated ${totalBatches} PDF file(s) with ${secretCodes.length.toLocaleString()} QR codes!`;
+
+            setTimeout(() => {
+                progressBar.style.display = 'none';
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+            }, 3000);
+        }
+
+        async function generatePDFFromCodes(codes, batchNum, totalBatches) {
+            const { jsPDF } = window.jspdf;
+            const qrSize = 15; // 1.5cm × 1.5cm QR code
+            const border = 3; // 3mm border around QR code
+            const pageSize = qrSize + (border * 2); // Total page size with border
+
+            // Create PDF with page size that includes border
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [pageSize, pageSize],
+                compress: true
+            });
+
+            for (let i = 0; i < codes.length; i++) {
+                // Add new page for each QR code (except the first one)
+                if (i > 0) {
+                    pdf.addPage([pageSize, pageSize]);
+                }
+
+                // Generate high quality QR code
+                const imgData = await generateQRCanvas(codes[i], 200);
+                // Add QR code with border margin
+                pdf.addImage(imgData, 'PNG', border, border, qrSize, qrSize, undefined, 'SLOW');
+
+                // Update progress within the current batch (show sub-progress)
+                if (i % 25 === 0 || i === codes.length - 1) {
+                    const batchProgress = Math.round(((i + 1) / codes.length) * 100);
+                    statusEl.textContent = `📄 PDF ${batchNum}/${totalBatches}: Processing QR ${i + 1}/${codes.length} (${batchProgress}%)`;
+                    await new Promise(resolve => setTimeout(resolve, 1));
+                }
+            }
+
+            // Format batch number with leading zeros (001, 002, etc.)
+            const batchNumStr = String(batchNum).padStart(3, '0');
+            const fileName = `QR_Codes_Batch_${batchNumStr}_of_${String(totalBatches).padStart(3, '0')}.pdf`;
+
+            pdf.save(fileName);
+        }
+
+        async function generateSinglePDF() {
+            statusEl.textContent = `📄 Starting PDF generation with ${secretCodes.length.toLocaleString()} QR codes...`;
+            statusEl.style.display = 'block';
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.textContent = '0%';
+
+            const { jsPDF } = window.jspdf;
+            const qrSize = 15; // 1.5cm × 1.5cm QR code
+            const border = 3; // 3mm border around QR code
+            const pageSize = qrSize + (border * 2); // Total page size with border
+
+            // Create PDF with page size that includes border
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [pageSize, pageSize],
+                compress: true
+            });
+
+            for (let i = 0; i < secretCodes.length; i++) {
+                // Add new page for each QR code (except the first one)
+                if (i > 0) {
+                    pdf.addPage([pageSize, pageSize]);
+                }
+
+                // Generate high quality QR code
+                const imgData = await generateQRCanvas(secretCodes[i], 200);
+                // Add QR code with border margin
+                pdf.addImage(imgData, 'PNG', border, border, qrSize, qrSize, undefined, 'SLOW');
+
+                // Update progress more frequently - every 10 QR codes or at the end
+                if (i % 10 === 0 || i === secretCodes.length - 1) {
+                    const progressPercentage = Math.round(((i + 1) / secretCodes.length) * 100);
+                    progressFill.style.width = progressPercentage + '%';
+                    progressText.textContent = progressPercentage + '%';
+                    statusEl.textContent = `📄 Processing QR code ${i + 1} of ${secretCodes.length.toLocaleString()} (${progressPercentage}%)...`;
+                    await new Promise(resolve => setTimeout(resolve, 1));
+                }
+            }
+
+            statusEl.textContent = `💾 Saving PDF file...`;
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            pdf.save(`QR_Codes_All_${secretCodes.length}_Codes.pdf`);
+
+            statusEl.textContent = `✅ Successfully generated PDF with ${secretCodes.length.toLocaleString()} QR codes (1 per page)!`;
+
+            setTimeout(() => {
+                progressBar.style.display = 'none';
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+            }, 3000);
+        }
+
+        // Clear all
+        clearBtn.addEventListener('click', () => {
+            secretCodes = [];
+            fileInput.value = '';
+            statusEl.style.display = 'none';
+            controls.style.display = 'none';
+            pdfOptions.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
