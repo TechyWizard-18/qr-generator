@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Secure QR Generator</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Poppins", sans-serif;
+            min-height: 100vh;
+            background: radial-gradient(circle at top left, #1f2933, #020617 60%);
+            color: #e5e7eb;
+            display: flex;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 1100px;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 18px 60px rgba(15, 23, 42, 0.8);
+            padding: 24px 20px 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .badge {
+            background: linear-gradient(to right, #22c55e, #16a34a);
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            color: #ecfdf3;
+            height: fit-content;
+            margin-top: 8px;
+        }
+
+        .upload-card {
+            border: 2px dashed rgba(148,163,184,0.45);
+            border-radius: 18px;
+            padding: 24px;
+            background: rgba(15,23,42,0.7);
+            transition: 0.3s;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .upload-card:hover {
+            border-color: rgba(96, 165, 250, 0.9);
+            transform: scale(1.01);
+            background: rgba(15,23,42,0.85);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .qr-size-select {
+            font-family: inherit;
+            padding: 8px 14px;
+            border-radius: 10px;
+            background: rgba(15,23,42,0.8);
+            color: #d1d5db;
+            border: 1px solid rgba(148,163,184,0.4);
+            outline: none;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .primary-btn,
+        .secondary-btn {
+            border: none;
+            padding: 10px 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+            transition: 0.2s ease;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: #fff;
+        }
+
+        .primary-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .secondary-btn {
+            background: rgba(15,23,42,0.85);
+            border: 1px solid rgba(148,163,184,0.45);
+            color: #d1d5db;
+        }
+
+        .secondary-btn.disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        #qrContainer {
+            display: grid;
+            gap: 16px;
+            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        }
+
+        .qr-item {
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid rgba(55, 65, 81, 0.9);
+            border-radius: 16px;
+            padding: 12px;
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 0.4s forwards;
+        }
+
+        .qr-label {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            margin-bottom: 6px;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <header>
+        <h1>Secure Encrypted QR Generator</h1>
+        <div class="badge">Encrypted • No Plain Text</div>
+    </header>
+
+    <!-- Upload area -->
+    <div class="upload-card" id="uploadCard">
+        <strong>📄 Select Encrypted File</strong>
+        <p style="font-size: 0.85rem; color:#b8c3d8; margin-top: 4px;">
+            Click here to choose your encrypted .txt file.
+        </p>
+        <p id="fileName" style="margin-top: 10px; color:#82aaff;"></p>
+
+        <input type="file" id="fileInput" accept=".txt" />
+    </div>
+
+    <!-- QR SIZE DROPDOWN (UI only) -->
+    <select id="qrSizeSelect" class="qr-size-select">
+        <option value="small">Small Stickers (90px)</option>
+        <option value="medium">Medium Stickers (120px)</option>
+    </select>
+
+    <button class="primary-btn disabled" id="generateBtn">Generate QR Codes ✨</button>
+    <button class="secondary-btn disabled" id="downloadPdfBtn">Download All as PDF 📥</button>
+
+    <div id="statusText" style="margin-top: 12px; font-size: 0.85rem; opacity: 0.8;">
+        Step 1: Upload the encrypted file.
+    </div>
+
+    <div id="qrContainer"></div>
+</div>
+
+<!-- QRCode.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+    const uploadCard = document.getElementById("uploadCard");
+    const fileInput = document.getElementById("fileInput");
+    const fileNameText = document.getElementById("fileName");
+    const qrSizeSelect = document.getElementById("qrSizeSelect");
+    const generateBtn = document.getElementById("generateBtn");
+    const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+    const statusText = document.getElementById("statusText");
+    const qrContainer = document.getElementById("qrContainer");
+
+    let selectedFile = null;
+    let qrSize = 90;           // UI display size in px
+    let qrColumnCount = 5;     // UI grid columns
+
+    // --- Prevent double file dialog ---
+    fileInput.addEventListener("click", (e) => e.stopPropagation());
+    uploadCard.addEventListener("click", () => {
+        fileInput.dispatchEvent(new MouseEvent("click", { bubbles: false }));
+    });
+
+    // Handle QR size dropdown (UI only)
+    qrSizeSelect.addEventListener("change", () => {
+        if (qrSizeSelect.value === "small") {
+            qrSize = 90;
+            qrColumnCount = 5;
+        } else {
+            qrSize = 120;
+            qrColumnCount = 4;
+        }
+
+        qrContainer.style.gridTemplateColumns =
+            `repeat(${qrColumnCount}, minmax(${qrSize + 40}px, 1fr))`;
+
+        if (qrContainer.childElementCount > 0) {
+            statusText.textContent =
+                "QR size changed (UI). PDF will still auto-fit stickers perfectly.";
+        }
+    });
+
+    // File selected
+    fileInput.addEventListener("change", () => {
+        selectedFile = fileInput.files[0];
+        if (!selectedFile) return;
+
+        fileNameText.textContent = "Selected: " + selectedFile.name;
+        generateBtn.classList.remove("disabled");
+        generateBtn.disabled = false;
+        statusText.textContent = "Step 2: Click Generate QR Codes.";
+    });
+
+    // Generate QR codes (on-screen)
+    generateBtn.addEventListener("click", () => {
+        if (!selectedFile) return;
+
+        generateBtn.classList.add("disabled");
+        generateBtn.disabled = true;
+
+        qrContainer.innerHTML = "";
+        statusText.textContent = "Processing file… Generating QR codes…";
+
+        qrContainer.style.gridTemplateColumns =
+            `repeat(${qrColumnCount}, minmax(${qrSize + 40}px, 1fr))`;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target.result;
+            const lines = text.split(/\r?\n/);
+
+            let count = 0;
+
+            lines.forEach((line) => {
+                line = line.replace(/\r$/, "");
+                if (!line.length) return;
+
+                count++;
+
+                const item = document.createElement("div");
+                item.className = "qr-item";
+
+                const label = document.createElement("div");
+                label.className = "qr-label";
+                label.textContent = "Code #" + count;
+
+                const qrBox = document.createElement("div");
+                new QRCode(qrBox, {
+                    text: line,
+                    width: qrSize,
+                    height: qrSize
+                });
+
+                item.appendChild(label);
+                item.appendChild(qrBox);
+                qrContainer.appendChild(item);
+            });
+
+            if (count > 0) {
+                downloadPdfBtn.classList.remove("disabled");
+                downloadPdfBtn.disabled = false;
+                statusText.textContent = "QR generation complete. You can now export PDF.";
+            } else {
+                statusText.textContent = "No valid lines found in file.";
+            }
+        };
+
+        reader.readAsText(selectedFile);
+    });
+
+    // Download all as PDF - Option C + choice 3 (auto layout)
+    downloadPdfBtn.addEventListener("click", async () => {
+        if (downloadPdfBtn.classList.contains("disabled")) return;
+
+        const canvases = qrContainer.querySelectorAll("canvas");
+        if (!canvases.length) return;
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ unit: "mm", format: "a4" });
+
+        const pageWidth = pdf.internal.pageSize.getWidth();   // ~210 mm
+        const pageHeight = pdf.internal.pageSize.getHeight(); // ~297 mm
+
+        const margin = 12; // safe printable margin
+        const usableWidth = pageWidth - 2 * margin;
+        const usableHeight = pageHeight - 2 * margin;
+
+        const total = canvases.length;
+
+        // 🔥 Auto-select columns based on total count
+        let perRow;
+        if (total > 200) {
+            perRow = 3;
+        } else if (total > 100) {
+            perRow = 4;
+        } else {
+            perRow = 5;
+        }
+
+        // Small spacing between stickers
+        const spacing = 3; // mm
+
+        // Auto-fit QR size so they NEVER cross page width
+        const qrSizeMm = (usableWidth - (perRow - 1) * spacing) / perRow;
+
+        let x = margin;
+        let y = margin;
+
+        canvases.forEach((canvas, index) => {
+            // New row check
+            if (index > 0 && index % perRow === 0) {
+                x = margin;
+                y += qrSizeMm + spacing;
+
+                // New page check
+                if (y + qrSizeMm > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                }
+            }
+
+            const imgData = canvas.toDataURL("image/png");
+
+            pdf.addImage(imgData, "PNG", x, y, qrSizeMm, qrSizeMm);
+
+            x += qrSizeMm + spacing;
+        });
+
+        pdf.save("QR-CODES.pdf");
+        statusText.textContent = "PDF downloaded with auto-fitted sticker grid (no cutting).";
+    });
+</script>
+
+</body>
+</html>
